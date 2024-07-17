@@ -29,8 +29,8 @@ type Skill = z.infer<typeof skillSchema>;
 
 export default function SkillsTable() {
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [currentPage, setCurrentPage] = useState<number | undefined>(0);
-  const [totalPages, setTotalPages] = useState<number | undefined>();
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
   const [itemsPerPage] = useState(5);
 
   const router = useRouter();
@@ -38,13 +38,13 @@ export default function SkillsTable() {
     resolver: zodResolver(skillSchema),
   });
 
-  const fetchData = async (page: number = 1) => {
+  const fetchData = async (page: number = 0) => {
     try {
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("id");
       const response = await api.get(`associacoes/usuario/${userId}/skills`, {
         params: {
-          page: currentPage - 1,
+          page: page,
           size: itemsPerPage,
         },
         headers: {
@@ -60,7 +60,7 @@ export default function SkillsTable() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(currentPage);
   }, [currentPage]);
 
   const handleLevelChange = (
@@ -137,20 +137,16 @@ export default function SkillsTable() {
   };
 
   const nextPage = () => {
-    if (currentPage < totalPages) {
+    if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1);
     }
   };
 
   const prevPage = () => {
-    if (currentPage > 1) {
-      fetchData(currentPage - 1);
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
     }
   };
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = skills.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <Card className="container bg-accent flex flex-col align-middle p-14 rounded-xl">
@@ -166,7 +162,7 @@ export default function SkillsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {currentItems.map((skill) => (
+            {skills.map((skill) => (
               <TableRow key={skill.id}>
                 <TableCell className="py-4">
                   <Image
@@ -181,7 +177,7 @@ export default function SkillsTable() {
                 <TableCell className="py-4">
                   <Input
                     type="text"
-                    value={skill.level.toString()} // Ensure 'level' is converted to string if needed
+                    value={skill.level.toString()}
                     onChange={(e) => handleLevelChange(skill.id, e)}
                     onKeyPress={(e) => handleKeyPress(skill.id, e)}
                     className="border p-1"
