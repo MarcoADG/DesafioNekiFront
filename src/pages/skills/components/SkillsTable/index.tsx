@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter } from "next/router";
 import api from "@/pages/api/axios";
 import {
   Table,
@@ -16,6 +13,18 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import SearchBar from "@/components/searchBar";
+import SortBar from "@/components/sortBar";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Modal from "@/components/modal";
 
 const skillSchema = z.object({
   id: z.number(),
@@ -31,26 +40,40 @@ export default function SkillsTable() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(0);
-  const [itemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [searchValue, setSearchValue] = useState<string>("");
+  const [sortValue, setSortValue] = useState<string>("");
 
-  const router = useRouter();
-  const { register, setValue } = useForm<Skill>({
-    resolver: zodResolver(skillSchema),
-  });
-
-  const fetchData = async (page: number = 0) => {
+  const fetchData = async (
+    page: number = 0,
+    search: string = "",
+    sort: string = "",
+    size: number = 0
+  ) => {
     try {
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("id");
+
+      const params: { [key: string]: any } = {
+        page: page,
+        size: itemsPerPage,
+      };
+
+      if (search.trim() !== "") {
+        params.skillNome = search.trim();
+      }
+
+      if (sort.trim() !== "") {
+        params.sort = sort.trim();
+      }
+
       const response = await api.get(`associacoes/usuario/${userId}/skills`, {
-        params: {
-          page: page,
-          size: itemsPerPage,
-        },
+        params: params,
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       setSkills(response.data.content);
       setTotalPages(response.data.totalPages);
       setCurrentPage(page);
@@ -60,8 +83,8 @@ export default function SkillsTable() {
   };
 
   useEffect(() => {
-    fetchData(currentPage);
-  }, [currentPage]);
+    fetchData(currentPage, searchValue, sortValue, itemsPerPage);
+  }, [currentPage, searchValue, sortValue, itemsPerPage]);
 
   const handleLevelChange = (
     id: number,
@@ -123,14 +146,7 @@ export default function SkillsTable() {
         },
       });
       console.log("Skill deleted successfully with ID:", id);
-
-      const userId = localStorage.getItem("id");
-      const response = await api.get(`associacoes/usuario/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setSkills(response.data);
+      fetchData(currentPage);
     } catch (error) {
       console.error("Error deleting skill:", error);
     }
@@ -148,10 +164,29 @@ export default function SkillsTable() {
     }
   };
 
+  const handlePagesChange = (value: number) => {
+    setItemsPerPage(value);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchValue(value);
+    setCurrentPage(0);
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortValue(value);
+    setCurrentPage(0);
+  };
+
   return (
     <Card className="container bg-accent flex flex-col align-middle p-14 rounded-xl">
       <CardContent>
-        <Table className="bg-primary-foreground rounded-3xl ">
+        <div className="flex items-center mb-4">
+          <Modal />
+          <SearchBar onSearch={handleSearch} />
+          <SortBar onSortChange={handleSortChange} />
+        </div>
+        <Table className="bg-primary-foreground rounded-3xl">
           <TableHeader>
             <TableRow>
               <TableHead>Image</TableHead>
@@ -177,7 +212,7 @@ export default function SkillsTable() {
                 <TableCell className="py-4">
                   <Input
                     type="text"
-                    value={skill.level.toString()}
+                    value={skill.level.toString()} // Ensure 'level' is converted to string if needed
                     onChange={(e) => handleLevelChange(skill.id, e)}
                     onKeyPress={(e) => handleKeyPress(skill.id, e)}
                     className="border p-1"
@@ -210,6 +245,24 @@ export default function SkillsTable() {
         <Button onClick={prevPage} className="">
           Anterior
         </Button>
+        <div className="w-fit">
+          <Select onValueChange={handlePagesChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="itens por pagina" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Paginas</SelectLabel>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="15">15</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="30">30</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
         <Button onClick={nextPage} className="">
           Próxima
         </Button>
