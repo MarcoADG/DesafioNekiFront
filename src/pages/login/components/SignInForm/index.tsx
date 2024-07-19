@@ -1,22 +1,15 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
-import api from "@/pages/api/axios";
+import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
+import InputField from "@/components/inputField";
+import CheckboxField from "@/components/checkBox";
+import api from "@/pages/api/axios";
+import { useToast } from "@/components/ui/use-toast";
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Por favor, preencha todos os campos."),
@@ -81,64 +74,37 @@ export default function SignInForm() {
   }, []);
 
   return (
-    <>
-      <Form {...loginForm}>
-        <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)}>
-          <FormField
-            control={loginForm.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <Input
-                    {...loginForm.register("username")}
-                    type="text"
-                    placeholder="Login"
-                  />
-                </FormControl>
-                <FormMessage>
-                  {loginForm.formState.errors.username?.message}
-                </FormMessage>
-              </FormItem>
-            )}
+    <Form {...loginForm}>
+      <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)}>
+        <InputField
+          placeholder="Login"
+          label="Username"
+          name="username"
+          register={loginForm.register}
+          error={loginForm.formState.errors.username}
+        />
+        <InputField
+          placeholder="Senha"
+          label="Password"
+          name="password"
+          type={showPassword ? "text" : "password"}
+          register={loginForm.register}
+          error={loginForm.formState.errors.password}
+        />
+        <div className="flex flex-col gap-5 mt-5">
+          <CheckboxField
+            label="Mostrar senha"
+            checked={showPassword}
+            onChange={handleCheckboxChange}
           />
-          <FormField
-            control={loginForm.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input
-                    {...loginForm.register("password")}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="password"
-                  />
-                </FormControl>
-
-                <FormMessage>
-                  {loginForm.formState.errors.password?.message}
-                </FormMessage>
-              </FormItem>
-            )}
+          <CheckboxField
+            label="Salvar senha"
+            checked={savePassword}
+            onChange={handleSavePasswordChange}
           />
-          <div className="flex flex-col gap-5 mt-5">
-            <div className="flex flex-row gap-3 justify-star">
-              <Checkbox onClick={handleCheckboxChange} checked={showPassword} />
-              <p>Mostrar senha</p>
-            </div>
-            <div className="flex flex-row gap-3 justify-star">
-              <Checkbox
-                onClick={handleSavePasswordChange}
-                checked={savePassword}
-              />
-              <p>Salvar senha</p>
-            </div>
-            <Button type="submit">Entrar</Button>
-          </div>
-        </form>
-      </Form>
-    </>
+          <Button type="submit">Entrar</Button>
+        </div>
+      </form>
+    </Form>
   );
 }

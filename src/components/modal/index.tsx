@@ -51,7 +51,7 @@ export default function Modal() {
     resolver: zodResolver(schema),
   });
 
-  const fetchData = async () => {
+  const fetchSkills = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -71,7 +71,7 @@ export default function Modal() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchSkills();
   }, []);
 
   const handleSaveSkill: SubmitHandler<FormData> = async (data) => {
@@ -103,7 +103,6 @@ export default function Modal() {
         },
       });
       console.log("Skill saved:", data.skill);
-      // Se tudo estiver ok, o dialog pode fechar
       handleClose();
     } catch (error) {
       console.error("Error saving skill:", error);
@@ -159,7 +158,9 @@ export default function Modal() {
             <DialogClose asChild>
               <Button type="button">Cancelar</Button>
             </DialogClose>
-            <Button type="submit">Salvar</Button>
+            <DialogClose asChild>
+              <Button type="submit">Salvar</Button>
+            </DialogClose>
           </DialogFooter>
         </form>
       </DialogContent>

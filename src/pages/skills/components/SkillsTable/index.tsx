@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { z } from "zod";
-import api from "@/pages/api/axios";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -25,6 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Modal from "@/components/modal";
+import { useSkills } from "@/hooks/useSkills";
+import api from "@/pages/api/axios";
 
 const skillSchema = z.object({
   id: z.number(),
@@ -34,57 +36,28 @@ const skillSchema = z.object({
   imagem: z.string().url(),
 });
 
-type Skill = z.infer<typeof skillSchema>;
+export type Skill = z.infer<typeof skillSchema>;
 
 export default function SkillsTable() {
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(0);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [searchValue, setSearchValue] = useState<string>("");
-  const [sortValue, setSortValue] = useState<string>("");
+  const initialParams = { page: 0, search: "", sort: "", size: 5 };
+  const {
+    skills,
+    totalPages,
+    currentPage,
+    itemsPerPage,
+    searchValue,
+    setItemsPerPage,
+    setSearchValue,
+    setSortValue,
+    fetchData,
+    nextPage,
+    prevPage,
+    setSkills,
+    isFirstPage,
+    isLastPage,
+  } = useSkills(initialParams);
 
-  const fetchData = async (
-    page: number = 0,
-    search: string = "",
-    sort: string = "",
-    size: number = 0
-  ) => {
-    try {
-      const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("id");
-
-      const params: { [key: string]: any } = {
-        page: page,
-        size: itemsPerPage,
-      };
-
-      if (search.trim() !== "") {
-        params.skillNome = search.trim();
-      }
-
-      if (sort.trim() !== "") {
-        params.sort = sort.trim();
-      }
-
-      const response = await api.get(`associacoes/usuario/${userId}/skills`, {
-        params: params,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setSkills(response.data.content);
-      setTotalPages(response.data.totalPages);
-      setCurrentPage(page);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchData(currentPage, searchValue, sortValue, itemsPerPage);
-  }, [currentPage, searchValue, sortValue, itemsPerPage]);
+  const navigate = useRouter();
 
   const handleLevelChange = (
     id: number,
@@ -102,38 +75,40 @@ export default function SkillsTable() {
     setSkills(updatedSkills);
   };
 
+  const handleLevelUpdate = async (id: number) => {
+    const skillToUpdate = skills.find((skill) => skill.id === id);
+    if (!skillToUpdate) {
+      console.error("Skill not found.");
+      return;
+    }
+
+    const { level } = skillToUpdate;
+    const usuarioId = localStorage.getItem("id");
+    const token = localStorage.getItem("token");
+    const requestData = {
+      usuarioId,
+      skillId: id,
+      level,
+    };
+
+    try {
+      await api.put(`associacoes/${id}`, requestData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log("Skill updated successfully.");
+    } catch (error) {
+      console.error("Error updating skill:", error);
+    }
+  };
+
   const handleKeyPress = (
     id: number,
     event: React.KeyboardEvent<HTMLInputElement>
   ) => {
     if (event.key === "Enter") {
-      const skillToUpdate = skills.find((skill) => skill.id === id);
-      if (!skillToUpdate) {
-        console.error("Skill not found.");
-        return;
-      }
-
-      const { id: skillId, level } = skillToUpdate;
-      const usuarioId = localStorage.getItem("id");
-      const token = localStorage.getItem("token");
-      const requestData = {
-        usuarioId,
-        skillId,
-        level,
-      };
-
-      api
-        .put(`associacoes/${id}`, requestData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .then((response) => {
-          console.log("Skill updated successfully:", response.data);
-        })
-        .catch((error) => {
-          console.error("Error updating skill:", error);
-        });
+      handleLevelUpdate(id);
     }
   };
 
@@ -152,34 +127,51 @@ export default function SkillsTable() {
     }
   };
 
-  const nextPage = () => {
-    if (currentPage < totalPages - 1) {
-      setCurrentPage(currentPage + 1);
+  const handlePagesChange = (value: string) => {
+    const numberValue = parseInt(value, 10);
+    if (!isNaN(numberValue)) {
+      setItemsPerPage(numberValue);
     }
-  };
-
-  const prevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handlePagesChange = (value: number) => {
-    setItemsPerPage(value);
   };
 
   const handleSearch = (value: string) => {
     setSearchValue(value);
-    setCurrentPage(0);
+    fetchData(0, value, "", itemsPerPage);
   };
 
   const handleSortChange = (value: string) => {
     setSortValue(value);
-    setCurrentPage(0);
+    fetchData(0, searchValue, value, itemsPerPage);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate.push("/");
   };
 
   return (
     <Card className="container bg-accent flex flex-col align-middle p-14 rounded-xl">
+      <Button
+        className="mx-6 w-fit rounded-r-full items-end"
+        onClick={handleLogout}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="lucide lucide-log-out"
+        >
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" x2="9" y1="12" y2="12" />
+        </svg>
+      </Button>
       <CardContent>
         <div className="flex items-center mb-4">
           <Modal />
@@ -210,15 +202,23 @@ export default function SkillsTable() {
                 </TableCell>
                 <TableCell className="py-4">{skill.nome}</TableCell>
                 <TableCell className="py-4">
-                  <Input
-                    type="text"
-                    value={skill.level.toString()} // Ensure 'level' is converted to string if needed
-                    onChange={(e) => handleLevelChange(skill.id, e)}
-                    onKeyPress={(e) => handleKeyPress(skill.id, e)}
-                    className="border p-1"
-                  />
+                  <div className="flex items-center">
+                    <Input
+                      type="text"
+                      value={skill.level.toString()}
+                      onChange={(e) => handleLevelChange(skill.id, e)}
+                      onKeyPress={(e) => handleKeyPress(skill.id, e)}
+                      className="border p-1 w-auto"
+                    />
+                    <Button
+                      onClick={() => handleLevelUpdate(skill.id)}
+                      className="ml-2"
+                    >
+                      Update
+                    </Button>
+                  </div>
                 </TableCell>
-                <TableCell className="py-4">{skill.descricao}</TableCell>
+                <TableCell className="py-4 w-auto">{skill.descricao}</TableCell>
                 <TableCell className="py-4">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -242,7 +242,7 @@ export default function SkillsTable() {
         </Table>
       </CardContent>
       <div className="flex justify-between mt-4">
-        <Button onClick={prevPage} className="">
+        <Button onClick={prevPage} disabled={isFirstPage} className="">
           Anterior
         </Button>
         <div className="w-fit">
@@ -263,7 +263,7 @@ export default function SkillsTable() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={nextPage} className="">
+        <Button onClick={nextPage} disabled={isLastPage}>
           Próxima
         </Button>
       </div>

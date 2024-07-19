@@ -1,21 +1,15 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
-import api from "@/pages/api/axios";
+import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
+import InputField from "@/components/inputField";
+import CheckboxField from "@/components/checkBox";
+import api from "@/pages/api/axios";
 import { loginSchema } from "../SignInForm";
+import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 const registerSchema = loginSchema
   .extend({
@@ -55,6 +49,7 @@ export default function SignUpForm({ setModo }: SignUpFormProps) {
       });
       toast({
         title: "Conta criada com sucesso!",
+        action: <ToastAction altText="Goto schedule to undo">Undo</ToastAction>,
       });
       setModo(true);
     } catch (error) {
@@ -65,77 +60,37 @@ export default function SignUpForm({ setModo }: SignUpFormProps) {
   };
 
   return (
-    <>
-      <Form {...registerForm}>
-        <form onSubmit={registerForm.handleSubmit(handleRegisterSubmit)}>
-          <FormField
-            control={registerForm.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <Input
-                    {...registerForm.register("username")}
-                    type="text"
-                    placeholder="Login"
-                  />
-                </FormControl>
-                <FormMessage>
-                  {registerForm.formState.errors.username?.message}
-                </FormMessage>
-              </FormItem>
-            )}
+    <Form {...registerForm}>
+      <form onSubmit={registerForm.handleSubmit(handleRegisterSubmit)}>
+        <InputField
+          label="Username"
+          name="username"
+          register={registerForm.register}
+          error={registerForm.formState.errors.username}
+        />
+        <InputField
+          label="Password"
+          name="password"
+          type={showPassword ? "text" : "password"}
+          register={registerForm.register}
+          error={registerForm.formState.errors.password}
+        />
+        <InputField
+          label="Confirmar Password"
+          name="confirmarSenha"
+          type={showPassword ? "text" : "password"}
+          register={registerForm.register}
+          error={registerForm.formState.errors.confirmarSenha}
+        />
+        <div className="flex flex-col gap-5 mt-5">
+          <CheckboxField
+            label="Mostrar senha"
+            checked={showPassword}
+            onChange={handleCheckboxChange}
           />
-          <FormField
-            control={registerForm.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input
-                    {...registerForm.register("password")}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Senha"
-                  />
-                </FormControl>
-
-                <FormMessage>
-                  {registerForm.formState.errors.password?.message}
-                </FormMessage>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={registerForm.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirmar Password</FormLabel>
-                <FormControl>
-                  <Input
-                    {...registerForm.register("confirmarSenha")}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Senha"
-                  />
-                </FormControl>
-
-                <FormMessage>
-                  {registerForm.formState.errors.password?.message}
-                </FormMessage>
-              </FormItem>
-            )}
-          />
-          <div className="flex flex-col gap-5 mt-5">
-            <div className="flex flex-row gap-3 justify-star">
-              <Checkbox onClick={handleCheckboxChange} checked={showPassword} />
-              <p>Mostrar senha</p>
-            </div>
-            <Button type="submit">Registrar</Button>
-          </div>
-        </form>
-      </Form>
-    </>
+          <Button type="submit">Registrar</Button>
+        </div>
+      </form>
+    </Form>
   );
 }
